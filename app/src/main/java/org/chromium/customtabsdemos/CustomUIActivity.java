@@ -28,8 +28,9 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.browser.customtabs.CustomTabColorSchemeParams;
 import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.appcompat.app.AppCompatActivity;
 
 /**
  * Opens Chrome Custom Tabs with a customized UI.
@@ -103,15 +104,27 @@ public class CustomUIActivity extends AppCompatActivity implements View.OnClickL
         }
     }
 
+    // customtabs
+    // https://developer.android.com/reference/androidx/browser/customtabs/package-summary
     private void openCustomTab() {
+        // https://developer.android.com/reference/androidx/browser/customtabs/CustomTabsIntent.Builder
         String url = mUrlEditText.getText().toString();
 
         int color = getColor(mCustomTabColorEditText);
         int secondaryColor = getColor(mCustomTabSecondaryColorEditText);
 
         CustomTabsIntent.Builder intentBuilder = new CustomTabsIntent.Builder();
-        intentBuilder.setToolbarColor(color);
-        intentBuilder.setSecondaryToolbarColor(secondaryColor);
+
+        // Color themes for the toolbar & navigation bar
+        CustomTabColorSchemeParams toolbarColorParams = new CustomTabColorSchemeParams.Builder()
+                .setToolbarColor(color)
+                .build();
+        CustomTabColorSchemeParams navigationColorParams = new CustomTabColorSchemeParams.Builder()
+                .setNavigationBarColor(secondaryColor)
+                .build();
+        intentBuilder.setColorScheme(CustomTabsIntent.COLOR_SCHEME_SYSTEM)
+                .setColorSchemeParams(CustomTabsIntent.COLOR_SCHEME_SYSTEM, toolbarColorParams)
+                .setDefaultColorSchemeParams(navigationColorParams);
 
         if (mShowActionButtonCheckbox.isChecked()) {
             //Generally you do not want to decode bitmaps in the UI thread. Decoding it in the
@@ -121,6 +134,7 @@ public class CustomUIActivity extends AppCompatActivity implements View.OnClickL
                     android.R.drawable.ic_menu_share);
             PendingIntent pendingIntent =
                     createPendingIntent(ActionBroadcastReceiver.ACTION_ACTION_BUTTON);
+            // Sets the action button that is displayed in the Toolbar with default tinting behavior.
             intentBuilder.setActionButton(icon, actionLabel, pendingIntent);
         }
 
@@ -128,11 +142,12 @@ public class CustomUIActivity extends AppCompatActivity implements View.OnClickL
             String menuItemTitle = getString(R.string.menu_item_title);
             PendingIntent menuItemPendingIntent =
                     createPendingIntent(ActionBroadcastReceiver.ACTION_MENU_ITEM);
+            // Adds a menu item.
             intentBuilder.addMenuItem(menuItemTitle, menuItemPendingIntent);
         }
 
         if (mAddDefaultShareCheckbox.isChecked()) {
-            intentBuilder.addDefaultShareMenuItem();
+            intentBuilder.setShareState(CustomTabsIntent.SHARE_STATE_DEFAULT);
         }
 
         if (mToolbarItemCheckbox.isChecked()) {
@@ -143,20 +158,24 @@ public class CustomUIActivity extends AppCompatActivity implements View.OnClickL
                     android.R.drawable.ic_menu_share);
             PendingIntent pendingIntent =
                     createPendingIntent(ActionBroadcastReceiver.ACTION_TOOLBAR);
+            // TODO: This method is deprecated.
             intentBuilder.addToolbarItem(TOOLBAR_ITEM_ID, icon, actionLabel, pendingIntent);
         }
 
+        // Sets whether the title should be shown in the custom tab.
         intentBuilder.setShowTitle(mShowTitleCheckBox.isChecked());
 
-        if (mAutoHideAppBarCheckbox.isChecked()) {
-            intentBuilder.enableUrlBarHiding();
-        }
+        // Set whether the url bar should hide as the user scrolls down on the page.
+        intentBuilder.setUrlBarHidingEnabled(mAutoHideAppBarCheckbox.isChecked());
 
         if (mCustomBackButtonCheckBox.isChecked()) {
+            // Sets the Close button icon for the custom tab.
             intentBuilder.setCloseButtonIcon(toBitmap(getDrawable(R.drawable.ic_arrow_back)));
         }
 
+        // Sets the start animations.
         intentBuilder.setStartAnimations(this, R.anim.slide_in_right, R.anim.slide_out_left);
+        // Sets the exit animations.
         intentBuilder.setExitAnimations(this, android.R.anim.slide_in_left,
                 android.R.anim.slide_out_right);
 
